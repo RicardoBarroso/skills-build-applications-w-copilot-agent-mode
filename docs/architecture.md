@@ -21,22 +21,22 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 | Capability | Method and path | Expected behavior |
 | --- | --- | --- |
-| Activity tracking | `GET /api/activities`, `POST /api/activities` | List and create valid activity records. POST accepts `userId`, `teamId`, `type`, and `minutes`; `userId` and `teamId` must be well-formed IDs for an existing user and team; otherwise respond with a deliberate 4xx (never a 500 from a cast error). A created activity stores the submitted `user`, `team`, `type`, and `minutes` plus computed `points` and `occurredAt`. |
-| Teams | `GET /api/teams`, `POST /api/teams` | List and create teams with members. Created and listed teams keep the submitted `name` and `mascot`. Reject a team without a name with `400`. |
+| Activity tracking | `GET /api/activities`, `POST /api/activities` | List and create valid activity records. POST accepts `userId`, `teamId`, `type`, and `minutes`; IDs must be well-formed references to an existing user and team, and the user must belong to that team. Minutes must be finite and greater than zero. Invalid requests receive a deliberate 4xx (never a 500 from validation or a cast error). A created activity stores the submitted `user`, `team`, `type`, and `minutes` plus computed `points` and `occurredAt`. |
+| Teams | `GET /api/teams`, `POST /api/teams` | List and create teams with members. Created and listed teams keep the submitted `name` and `mascot`. Reject a team without a name with `400`. Member transfers reconcile the prior teams and users; if an update fails, compensate the earlier changes and remove the incomplete team. |
 | Leaderboard | `GET /api/leaderboard` | Return teams ordered by the sum of their activity points, highest first. Each entry has `teamName`, `totalPoints`, and a 1-based `rank`. |
-| Workout suggestions | `GET /api/workouts/suggestions/:userEmail` | Recommend workouts from recent activity patterns for the matching seeded user's email address. The first suggestion's `focus` matches that user's goal or recent activity, with a `reason` explaining why. An email with no matching user returns a deliberate 4xx (for example, `404`). |
+| Workout suggestions | `GET /api/workouts/suggestions/:userEmail` | Recommend workouts from recent activity patterns for the matching seeded user's email address. The first suggestion's `focus` matches that user's goal or recent activity, with a `reason` explaining why. If no workout matches that focus, return an empty `suggestions` array for the UI's empty state. An email with no matching user returns a deliberate 4xx (for example, `404`). |
 
 ## Implementation decisions
 
 Record your plan here before editing code.
 
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: Keep pages and components focused on rendering and user input; use the shared API client for requests and show accessible loading, empty, success, and error states.
+- Logic tier decision: Keep `/api/*` routes thin: validate request shape, delegate business rules to service functions, and return deliberate 4xx responses for invalid or missing resources.
+- Data tier decision: Use Mongoose schemas for persistence and field validation, with references between users, teams, and activities; keep demo data stable through upserts.
+- Activity tracking approach: Validate the submitted user and team IDs against existing records, compute points on the server using one documented rule, and set `occurredAt` on creation.
+- Team management approach: Create teams with the submitted name and mascot; validate member references and keep team membership consistent when creating or updating membership.
+- Leaderboard approach: Aggregate activity points by team, sort highest first with a deterministic tie-breaker, and assign ranks in the API response.
+- Workout suggestions approach: Use deterministic, rule-based suggestions from a user's goal and recent activities; explain each recommendation and return a 4xx response if no user matches.
 
 ## Test plan
 
