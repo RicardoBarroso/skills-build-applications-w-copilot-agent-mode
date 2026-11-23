@@ -3,7 +3,7 @@ import { getJson } from '../api/client.js';
 import { CapabilityCard } from './CapabilityCard.js';
 
 type Activity = {
-  _id: string;
+  _id?: string;
   type?: string;
   minutes?: number;
   points?: number;
@@ -35,7 +35,10 @@ export default function Activities() {
     <CapabilityCard title="Activities" description="Track student activity minutes and points.">
       <ul className="list-group">
         {activities.map((activity) => (
-          <li className="list-group-item" key={activity._id}>
+          <li
+            className="list-group-item"
+            key={activity._id ?? `${activity.type}-${activity.minutes}-${activity.points}`}
+          >
             {activity.type} - {activity.minutes} minutes - {activity.points} points
           </li>
         ))}

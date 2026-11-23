@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getJson } from '../api/client.js';
 import { CapabilityCard } from './CapabilityCard.js';
 
-type WorkoutSuggestion = { _id: string; title?: string; reason?: string };
+type WorkoutSuggestion = { _id?: string; title?: string; focus?: string; minutes?: number; reason?: string };
 
 export default function Workouts() {
   const [suggestions, setSuggestions] = useState<WorkoutSuggestion[] | null>(null);
@@ -22,7 +22,10 @@ export default function Workouts() {
     <CapabilityCard title="Workout suggestions" description="Recommend workouts from activity patterns.">
       <ul className="list-group">
         {suggestions.map((suggestion) => (
-          <li className="list-group-item" key={suggestion._id}>
+          <li
+            className="list-group-item"
+            key={suggestion._id ?? `${suggestion.title}-${suggestion.focus}-${suggestion.minutes}`}
+          >
             {suggestion.title}
             {suggestion.reason ? ` - ${suggestion.reason}` : ''}
           </li>
