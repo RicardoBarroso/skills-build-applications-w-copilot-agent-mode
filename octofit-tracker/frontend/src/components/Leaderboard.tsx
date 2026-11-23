@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getJson } from '../api/client.js';
 import { CapabilityCard } from './CapabilityCard.js';
 
-type LeaderboardEntry = { teamName?: string; totalPoints?: number; rank?: number };
+type LeaderboardEntry = { _id: string; teamName?: string; totalPoints?: number; rank?: number };
 
 export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
@@ -21,8 +21,8 @@ export default function Leaderboard() {
   return (
     <CapabilityCard title="Leaderboard" description="Compare team point totals.">
       <ol className="list-group list-group-numbered">
-        {entries.map((entry, index) => (
-          <li className="list-group-item" key={entry.teamName ?? index}>
+        {entries.map((entry) => (
+          <li className="list-group-item" key={entry._id}>
             {entry.teamName} - {entry.totalPoints} points
           </li>
         ))}

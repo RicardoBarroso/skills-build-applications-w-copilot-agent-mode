@@ -22,6 +22,8 @@ export async function createActivity(input: unknown) {
     || typeof teamId !== 'string'
     || typeof type !== 'string'
     || typeof minutes !== 'number'
+    || !Number.isFinite(minutes)
+    || minutes <= 0
     || !Types.ObjectId.isValid(userId)
     || !Types.ObjectId.isValid(teamId)
   ) {
@@ -34,6 +36,10 @@ export async function createActivity(input: unknown) {
   ]);
   if (!user || !team) {
     throw Object.assign(new Error('Activity references a missing user or team'), { status: 400 });
+  }
+  const normalizedTeamId = new Types.ObjectId(teamId).toString();
+  if (user.team?.toString() !== normalizedTeamId) {
+    throw Object.assign(new Error('Activity user does not belong to the specified team'), { status: 400 });
   }
 
   try {
@@ -80,8 +86,8 @@ export async function createTeam(_input: unknown) {
     throw Object.assign(new Error('Team references a missing user'), { status: 400 });
   }
 
+  const team = await Team.create({ name: name.trim(), mascot: mascot.trim(), members: memberIds });
   try {
-    const team = await Team.create({ name: name.trim(), mascot: mascot.trim(), members: memberIds });
     for (const member of existingMembers) {
       if (member.team) {
         await Team.updateOne({ _id: member.team }, { $pull: { members: member._id } });
@@ -90,9 +96,34 @@ export async function createTeam(_input: unknown) {
     }
     return team;
   } catch (error) {
+    const rollbackErrors: unknown[] = [];
+    const rollback = async (operation: () => PromiseLike<unknown>) => {
+      try {
+        await operation();
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError);
+      }
+    };
+
+    await rollback(() => Team.deleteOne({ _id: team._id }));
+    for (const member of existingMembers) {
+      await rollback(() => member.team
+        ? User.updateOne({ _id: member._id }, { $set: { team: member.team } })
+        : User.updateOne({ _id: member._id }, { $unset: { team: 1 } }));
+      if (member.team) {
+        await rollback(() => Team.updateOne({ _id: member.team }, { $addToSet: { members: member._id } }));
+      }
+    }
+
+    if (rollbackErrors.length > 0) {
+      throw Object.assign(
+        new AggregateError([error, ...rollbackErrors], 'Team creation failed and rollback was incomplete'),
+        { status: 500 },
+      );
+    }
     throw Object.assign(
-      error instanceof Error ? error : new Error('Invalid team input'),
-      { status: 400 },
+      error instanceof Error ? error : new Error('Team creation failed'),
+      { status: 500 },
     );
   }
 }
@@ -111,7 +142,7 @@ export async function getLeaderboard() {
     { $unwind: '$team' },
     {
       $project: {
-        _id: 0,
+        _id: '$team._id',
         teamName: '$team.name',
         totalPoints: 1,
       },
