@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getJson } from '../api/client.js';
 import { CapabilityCard } from './CapabilityCard.js';
 
-type Team = { _id: string; name?: string; members?: string[] };
+type Team = { _id?: string; name?: string; members?: string[] };
 
 export default function Teams() {
   const [teams, setTeams] = useState<Team[] | null>(null);
@@ -22,7 +22,7 @@ export default function Teams() {
     <CapabilityCard title="Teams" description="Manage teams and members.">
       <ul className="list-group">
         {teams.map((team) => (
-          <li className="list-group-item" key={team._id}>
+          <li className="list-group-item" key={team._id ?? team.name}>
             {team.name}
             {team.members?.length ? ` - ${team.members.length} members` : ''}
           </li>
